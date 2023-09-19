@@ -11,9 +11,12 @@ export class GameBoard implements DisplayedBody {
     this.body = body;
   }
 
-  rotate( x: number, y: number, z: number ) {
-    this.body.quaternion.setFromEuler( x, y, z )
-    // this.body.angularVelocity = new CANNON.Vec3( x, y, z );
+  setAngularVelocity( x: number, y: number, z: number ) {
+    this.body.angularVelocity = new CANNON.Vec3( x, y, z );
+  }
+
+  setQuaternionFromEuler( x: number, y: number, z: number ) {
+    this.body.quaternion.setFromEuler( x, y, z );
   }
 }
 

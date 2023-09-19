@@ -37,14 +37,14 @@ class MazeGameUserEventHandlers {
   }
 
   onMouseMove ( e: MouseEvent ) {
-    this.controller.rotateGameBoardByPointerCoords( e.x, e.y );
+    this.controller.updatePointerCoords( e.x, e.y );
   }
 
   onTouchMove ( e: TouchEvent ) {
     e.preventDefault();
     const lastTouch = e.touches.item( e.touches.length - 1 );
     if ( lastTouch === null ) return;
-    this.controller.rotateGameBoardByPointerCoords( lastTouch.pageX, lastTouch.pageY );
+    this.controller.updatePointerCoords( lastTouch.pageX, lastTouch.pageY );
   }
 
   onWindowResize ( e: UIEvent ) {
@@ -99,8 +99,10 @@ export class MazeGameView {
   }
 
   setupCamera () {
-    this.camera.position.z = 12;
-    this.camera.position.y = -10;
+    const cameraAngle = gameConfig.gameBoard.cameraAngle;
+    const cameraDistance = gameConfig.gameBoard.cameraDistance;
+    this.camera.position.z = Math.cos( cameraAngle ) * cameraDistance;
+    this.camera.position.y = - Math.sin( cameraAngle ) * cameraDistance;
     this.camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
   }
 
@@ -170,30 +172,7 @@ export class MazeGameView {
   }
 
   updateGameBoard () {
-    // const gameBoard = this.controller.state.gameBoard;
-    // const rotation = new CANNON.Vec3( 0, 0, 0 );
-    // gameBoard.body.quaternion.toEuler( rotation );
-    // gameBoard.body.quaternion.setFromEuler(
-    //   rotation.x,
-    //   rotation.y,
-    //   0,
-    // );
-    // const rotationLimit = gameConfig.gameBoard.rotationLimit;
-    // const accelerationFactors: Vec2 = {
-    //   x: ( ( Math.sign( rotation.x ) || 1 ) * rotationLimit.x - rotation.x
-    //         ) / ( 2 * rotationLimit.x ),
-    //   y: ( ( Math.sign( rotation.y ) || 1 ) * rotationLimit.y - rotation.y
-    //         ) / ( 2 * rotationLimit.y ),
-    // }
-
-    // gameBoard.body.angularVelocity.vmul(
-    //   new CANNON.Vec3(
-    //     accelerationFactors.x,
-    //     accelerationFactors.y,
-    //     0,
-    //   ),
-    //   this.controller.state.gameBoard.body.angularVelocity,
-    // );
+    this.controller.updateGameBoardOnRender();
 
     this.controller.state.gameBoard.display.position.copy(
       ThreeCannonConverter.Vec3ToVector3(

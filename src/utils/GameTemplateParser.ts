@@ -76,7 +76,8 @@ export class GameTemplateParser {
     if ( gameConfig.gameBoard.beforeCreated ) {
       gameConfig.gameBoard.beforeCreated( gameBoard )
     }
-    return new Game( gameBoard, balls );
+    const pointer: Vec2 = { x: 0, y: 0 };
+    return new Game( gameBoard, balls, pointer );
   }
 }
 
