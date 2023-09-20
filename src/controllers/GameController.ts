@@ -45,8 +45,8 @@ export class GameController {
           rotation.y ) / this.cache.rotationRange.y,
     }
     const direction: Vec2 = {
-      x: Math.sign( pointer.x ) * target.x * toLimit.x,
-      y: Math.sign( pointer.y ) * target.y * toLimit.y,
+      x: pointer.x * target.x * toLimit.x,
+      y: pointer.y * target.y * toLimit.y,
     };
     const rotationStep = gameConfig.gameBoard.rotationStep;
     const newRotation: Vec2 = {

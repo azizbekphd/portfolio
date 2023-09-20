@@ -4,6 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import gameConfig from "../config/gameConfig";
 import { GameController } from "../controllers/GameController";
 import { ThreeCannonConverter } from "../utils/ThreeCannonConverter";
+import { Decoration } from "../types/Decoration";
 
 interface MazeGameUserEventHandlerParams {
   controller: GameController,
@@ -78,6 +79,7 @@ export class MazeGameView {
   userEventsHandler?: MazeGameUserEventHandlers;
 
   controller: GameController;
+  decorations: Decoration[];
 
   constructor ( controller: GameController ) {
     this.controller = controller;
@@ -87,8 +89,9 @@ export class MazeGameView {
     this.camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
     this.renderer = new THREE.WebGLRenderer();
     this.world = new CANNON.World( {
-      gravity: new CANNON.Vec3( 0, 0, -9.81 ),
+      gravity: gameConfig.world.gravity,
     } );
+    this.decorations = gameConfig.decorations;
     this.debugger = new ( CannonDebugger as any )( this.scene, this.world );
   }
 
@@ -99,6 +102,7 @@ export class MazeGameView {
     this.setupWorld();
     this.setupGameBoard();
     this.setupBalls();
+    this.setupDecoration();
   }
 
   setupRenderer () {
@@ -117,39 +121,14 @@ export class MazeGameView {
   }
 
   setupEnvironment () {
-    const hemisphereLight = new THREE.HemisphereLight(
-      new THREE.Color( 0x00c0ff ),
-      new THREE.Color( 0x111100 ),
-      .1,
-    );
-    hemisphereLight.castShadow = false;
-    this.scene.add( hemisphereLight );
-    
-    const ambientLight = new THREE.AmbientLight(
-      new THREE.Color( 0xffffff ),
-      .2,
-    );
-    ambientLight.castShadow = false;
-    this.scene.add( ambientLight );
-    
-    const sunlight = new THREE.PointLight(
-      new THREE.Color( 0xffffe1 ),
-      .7,
-    );
-    sunlight.position.set( -40, 40, 40 )
-    sunlight.castShadow = true;
-    sunlight.shadow.mapSize = new THREE.Vector2( 8192, 8192 );
-    sunlight.shadow.radius = 1;
-    this.scene.add( sunlight );
+    gameConfig.environment.objects.forEach( object => this.scene.add( object ) );
   }
 
   setupWorld () {
     const contactMaterial = new CANNON.ContactMaterial(
       this.controller.state.gameBoard.body.material!,
-      this.controller.state.balls[0].body.material!, {
-        friction: 0.02,
-        restitution: 0,
-      }
+      this.controller.state.balls[0].body.material!,
+      gameConfig.world.contactMaterials.gameBoardAndBall,
     );
     this.world.addContactMaterial( contactMaterial );
   }
@@ -168,11 +147,18 @@ export class MazeGameView {
     )
   }
 
+  setupDecoration () {
+    this.decorations.forEach( decoration => {
+      this.scene.add( decoration.display );
+    } );
+  }
+
   animate () {
 	  requestAnimationFrame( this.animate );
 
     this.updateGameBoard();
     this.updateBalls();
+    this.updateDecorations();
 
     if ( gameConfig.debug ) {
       this.debugger.update();
@@ -203,6 +189,12 @@ export class MazeGameView {
             ball.body.quaternion ) );
       }
     )
+  }
+
+  updateDecorations () {
+    this.decorations.forEach( decoration => {
+      decoration.update();
+    } )
   }
 
   run () {
