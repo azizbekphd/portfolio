@@ -1,6 +1,7 @@
 import * as CANNON from "cannon-es";
 import gameConfig from "../config/gameConfig";
 import { Game } from "../models/Game";
+import { Vec2 } from "../types/Vec2";
 
 export class GameController {
   state: Game;

@@ -1,5 +1,6 @@
 import { Ball } from "../types/Ball";
 import { GameBoard } from "../types/GameBoard";
+import { Vec2 } from "../types/Vec2";
 
 export class Game {
   pointer: Vec2;

@@ -7,6 +7,7 @@ import { Game } from "../models/Game";
 import { Ball } from "../types/Ball";
 import { DisplayedGameBoardCell } from "../types/DisplayedGameBoardCell";
 import { GameBoard } from "../types/GameBoard";
+import { Vec2 } from "../types/Vec2";
 import { ThreeCannonConverter } from "./ThreeCannonConverter";
 
 class InvalidCharacterInTemplateError extends Error {

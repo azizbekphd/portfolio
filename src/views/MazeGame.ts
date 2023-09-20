@@ -5,9 +5,15 @@ import gameConfig from "../config/gameConfig";
 import { GameController } from "../controllers/GameController";
 import { ThreeCannonConverter } from "../utils/ThreeCannonConverter";
 
-type MazeGameUserEventHandler = ( e: UIEvent, controller: GameController ) => void;
+interface MazeGameUserEventHandlerParams {
+  controller: GameController,
+  camera: THREE.PerspectiveCamera,
+  renderer: THREE.Renderer,
+}
 
-class MazeGameUserEventHandlers {
+type MazeGameUserEventHandler = ( e: any, params: MazeGameUserEventHandlerParams ) => void;
+
+class MazeGameUserEventHandlers implements MazeGameUserEventHandlerParams {
   controller: GameController;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
@@ -23,9 +29,12 @@ class MazeGameUserEventHandlers {
   }
 
   addEventHandler ( event: keyof WindowEventMap, fn: MazeGameUserEventHandler ) {
-    const that = this;
     window.addEventListener( event, ( e ) => {
-      that.onMouseMove( e );
+      fn( e, {
+        controller: this.controller,
+        camera: this.camera,
+        renderer: this.renderer,
+      } );
     } );
   }
 
@@ -36,22 +45,23 @@ class MazeGameUserEventHandlers {
     this.addEventHandler( 'scroll', this.onWindowScroll );
   }
 
-  onMouseMove ( e: MouseEvent ) {
-    this.controller.updatePointerCoords( e.x, e.y );
+  onMouseMove ( e: MouseEvent, that: MazeGameUserEventHandlerParams ) {
+    that.controller.updatePointerCoords( e.x, e.y );
   }
 
-  onTouchMove ( e: TouchEvent ) {
+  onTouchMove ( e: TouchEvent, that: MazeGameUserEventHandlerParams ) {
     e.preventDefault();
     const lastTouch = e.touches.item( e.touches.length - 1 );
     if ( lastTouch === null ) return;
-    this.controller.updatePointerCoords( lastTouch.pageX, lastTouch.pageY );
+    that.controller.updatePointerCoords( lastTouch.pageX, lastTouch.pageY );
   }
 
-  onWindowResize ( e: UIEvent ) {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
+  onWindowResize ( e: UIEvent, that: MazeGameUserEventHandlerParams ) {
+    e;
+    that.camera.aspect = window.innerWidth / window.innerHeight;
+    that.camera.updateProjectionMatrix();
 
-    this.renderer.setSize( window.innerWidth, window.innerHeight );
+    that.renderer.setSize( window.innerWidth, window.innerHeight );
   }
 
   onWindowScroll ( e: UIEvent ) {
@@ -64,7 +74,7 @@ export class MazeGameView {
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   world: CANNON.World;
-  debugger: CannonDebugger;
+  debugger: any;
   userEventsHandler?: MazeGameUserEventHandlers;
 
   controller: GameController;
@@ -79,7 +89,7 @@ export class MazeGameView {
     this.world = new CANNON.World( {
       gravity: new CANNON.Vec3( 0, 0, -9.81 ),
     } );
-    this.debugger = new CannonDebugger( this.scene, this.world );
+    this.debugger = new ( CannonDebugger as any )( this.scene, this.world );
   }
 
   setup () {

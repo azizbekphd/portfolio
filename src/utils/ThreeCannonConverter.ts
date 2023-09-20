@@ -11,8 +11,8 @@ export class ThreeCannonConverter {
     } else {
         vertices = geometry.clone().toNonIndexed().attributes.position.array
     }
-    const indices = Object.keys(vertices).map(Number)
-    const shape = new CANNON.Trimesh(vertices, indices)
+    const indices = Object.keys( vertices ).map( Number )
+    const shape = new CANNON.Trimesh( vertices as number[], indices )
     const body = new CANNON.Body( options );
     body.addShape( shape );
     body.position.x = mesh.position.x;
