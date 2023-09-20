@@ -21,26 +21,31 @@ const gameConfig = {
     },
 
     rotationLimit: {
-      minX: - Math.PI / 3,
-      minY: - Math.PI / 3,
-      maxX: Math.PI / 3,
-      maxY: Math.PI / 3,
+      minX: - Math.PI / 5,
+      minY: - Math.PI / 5,
+      maxX: Math.PI / 5,
+      maxY: Math.PI / 5,
     },
 
-    rotationVelocityBase: {
+    rotationStep: {
+      x: 0.03,
+      y: 0.03,
+    },
+
+    angularVelosityBase: {
       x: 2,
       y: 2,
     },
 
     maxRotationVelocity: {
-      x: 2,
-      y: 2,
+      x: 10,
+      y: 10,
     }
   },
 
   ball: {
     radius: 0.4,
-    mass: 10,
+    mass: 100,
   }
 }
 
