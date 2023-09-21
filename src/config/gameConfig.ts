@@ -1,7 +1,13 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass";
 import * as CANNON from "cannon-es";
 import { GameBoard } from "../types/GameBoard";
-import { Decoration, FixedDecorationPosition } from "../types/Decoration";
+import { Decoration } from "../types/Decoration";
+import { Game } from "../models/Game";
 
 const gameConfig = {
   debug: false,
@@ -94,27 +100,112 @@ const gameConfig = {
     mass: 100,
   },
 
+  postprocessors: (() => {
+
+		const BLOOM_SCENE = 1;
+
+		const bloomLayer = new THREE.Layers();
+		bloomLayer.set( BLOOM_SCENE );
+
+		const params = {
+			threshold: 0,
+			strength: 1,
+			radius: 0.5,
+			exposure: 1
+		};
+    const materials: { [ key: string ]: THREE.Material | THREE.Material[] } = {};
+    const darkMaterial = new THREE.MeshBasicMaterial( { color: "black" } );
+
+    return ( renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, controller: Game ) => {
+      const postprocessors: {
+        prerenderCallback?: ( obj: THREE.Object3D ) => any,
+        setup?: () => any,
+        composer: EffectComposer,
+      }[] = [];
+
+      const renderScene = new RenderPass( scene, camera );
+
+		  const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+      bloomPass.threshold = params.threshold;
+			bloomPass.strength = params.strength;
+			bloomPass.radius = params.radius;
+
+		  const bloomComposer = new EffectComposer( renderer );
+		  bloomComposer.renderToScreen = false;
+		  bloomComposer.addPass( renderScene );
+		  bloomComposer.addPass( bloomPass );
+
+      postprocessors.push( {
+        prerenderCallback: ( obj ) => {
+          if ( ( obj as THREE.Mesh ).isMesh && bloomLayer.test( obj.layers ) === false ) {
+		  			materials[ obj.uuid ] = ( obj as THREE.Mesh ).material;
+		  			( obj as THREE.Mesh ).material = darkMaterial;
+		  		}
+        },
+        composer: bloomComposer,
+      } );
+
+      const vertexShader = `
+        varying vec2 vUv;
+
+		  	void main() {
+		  		vUv = uv;
+		  		gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+		  	}
+      `;
+
+      const fragmentShader = `
+		  	uniform sampler2D baseTexture;
+		  	uniform sampler2D bloomTexture;
+
+		  	varying vec2 vUv;
+
+		  	void main() {
+		  		gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+		  	}
+      `;
+
+		  const mixPass = new ShaderPass(
+		  	new THREE.ShaderMaterial( {
+		  		uniforms: {
+		  			baseTexture: { value: null },
+		  			bloomTexture: { value: bloomComposer.renderTarget2.texture }
+		  		},
+		  		vertexShader: vertexShader,
+		  		fragmentShader: fragmentShader,
+		  		defines: {}
+		  	} ), 'baseTexture'
+		  );
+		  mixPass.needsSwap = true;
+
+		  const outputPass = new OutputPass();
+
+		  const finalComposer = new EffectComposer( renderer );
+		  finalComposer.addPass( renderScene );
+		  finalComposer.addPass( mixPass );
+		  finalComposer.addPass( outputPass );
+
+      postprocessors.push( {
+        prerenderCallback: ( obj ) => {
+				  if ( materials[ obj.uuid ] ) {
+				  	( obj as THREE.Mesh ).material = materials[ obj.uuid ];
+				  	delete materials[ obj.uuid ];
+				  }
+        },
+        setup: () => {
+          controller.balls.forEach( ball => {
+            ball.display.layers.enable( BLOOM_SCENE );
+          } );
+        },
+        composer: finalComposer,
+      } );
+
+      return postprocessors;
+    }
+  })(),
+
   decorations: (() => {
     const objects: Decoration[] = [];
-
-    const board = new Decoration( {
-      position: new FixedDecorationPosition( {
-        x: 0, y: 0, z: 0,
-      } ),
-      display: new THREE.Mesh(
-        new THREE.TorusGeometry( Math.cos( Math.PI / 4 ) * 12, 1, 64, 4 ),
-        new THREE.MeshPhysicalMaterial( {
-          color: 0xffff00,
-        } ),
-      ),
-      setupCallback: ( object ) => {
-        object.rotateZ( Math.PI / 4 );
-      },
-      updateCallback: ( object ) => {
-        object.position.setZ( -1 + Math.cos( Date.now() / 850 ) / 5 );
-      }
-    } );
-    objects.push( board );
 
     return objects;
   })(),

@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { Game } from "../models/Game";
 
 class DecorationPosition {}
 
@@ -12,7 +13,7 @@ export class FixedDecorationPosition extends DecorationPosition {
 }
 
 interface DecorationCallback {
-  ( object: THREE.Object3D ): any;
+  ( object: THREE.Object3D, state?: Game ): any;
 }
 
 interface DecorationParams {
@@ -48,9 +49,9 @@ export class Decoration implements DecorationParams {
     }
   }
 
-  update () {
+  update ( controllerState: Game ) {
     if ( this.updateCallback ) {
-      this.updateCallback( this.display );
+      this.updateCallback( this.display, controllerState );
     }
   }
 }

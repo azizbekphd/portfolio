@@ -7,22 +7,19 @@ import { ThreeCannonConverter } from "../utils/ThreeCannonConverter";
 import { Decoration } from "../types/Decoration";
 
 interface MazeGameUserEventHandlerParams {
-  controller: GameController,
-  camera: THREE.PerspectiveCamera,
-  renderer: THREE.Renderer,
+  controller: GameController;
+  resizeCallback: ( ...params: any ) => any;
 }
 
 type MazeGameUserEventHandler = ( e: any, params: MazeGameUserEventHandlerParams ) => void;
 
 class MazeGameUserEventHandlers implements MazeGameUserEventHandlerParams {
   controller: GameController;
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  resizeCallback: (...params: any) => any;
 
-  constructor ( controller: GameController, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer ) {
+  constructor ( controller: GameController, resizeCallback: ( ...params: any ) => any ) {
     this.controller = controller;
-    this.camera = camera;
-    this.renderer = renderer;
+    this.resizeCallback = resizeCallback;
   }
 
   setup () {
@@ -33,8 +30,7 @@ class MazeGameUserEventHandlers implements MazeGameUserEventHandlerParams {
     window.addEventListener( event, ( e ) => {
       fn( e, {
         controller: this.controller,
-        camera: this.camera,
-        renderer: this.renderer,
+        resizeCallback: this.resizeCallback,
       } );
     } );
   }
@@ -59,10 +55,7 @@ class MazeGameUserEventHandlers implements MazeGameUserEventHandlerParams {
 
   onWindowResize ( e: UIEvent, that: MazeGameUserEventHandlerParams ) {
     e;
-    that.camera.aspect = window.innerWidth / window.innerHeight;
-    that.camera.updateProjectionMatrix();
-
-    that.renderer.setSize( window.innerWidth, window.innerHeight );
+    that.resizeCallback();
   }
 
   onWindowScroll ( e: UIEvent ) {
@@ -80,6 +73,7 @@ export class MazeGameView {
 
   controller: GameController;
   decorations: Decoration[];
+  postprocessors: ReturnType<typeof gameConfig.postprocessors>
 
   constructor ( controller: GameController ) {
     this.controller = controller;
@@ -92,6 +86,7 @@ export class MazeGameView {
       gravity: gameConfig.world.gravity,
     } );
     this.decorations = gameConfig.decorations;
+    this.postprocessors = gameConfig.postprocessors( this.renderer, this.scene, this.camera );
     this.debugger = new ( CannonDebugger as any )( this.scene, this.world );
   }
 
@@ -109,6 +104,7 @@ export class MazeGameView {
     this.renderer.shadowMap.enabled = true;
     this.renderer.setSize( window.innerWidth, window.innerHeight );
     this.renderer.setPixelRatio( window.devicePixelRatio );
+		this.renderer.toneMapping = THREE.ReinhardToneMapping;
     document.body.appendChild( this.renderer.domElement );
   }
 
@@ -153,12 +149,20 @@ export class MazeGameView {
     } );
   }
 
+  setupPostprocessors () {
+    this.postprocessors.forEach( postprocessor => {
+      if ( !postprocessor.setup ) return;
+      postprocessor.setup();
+    } )
+  }
+
   animate () {
 	  requestAnimationFrame( this.animate );
 
     this.updateGameBoard();
     this.updateBalls();
     this.updateDecorations();
+    this.updatePostprocessors();
 
     if ( gameConfig.debug ) {
       this.debugger.update();
@@ -193,13 +197,30 @@ export class MazeGameView {
 
   updateDecorations () {
     this.decorations.forEach( decoration => {
-      decoration.update();
+      decoration.update( this.controller.state );
     } )
+  }
+
+  updatePostprocessors () {
+    this.postprocessors.forEach( postprocessor => {
+      if ( postprocessor.prerenderCallback ) {
+        this.scene.traverse( postprocessor.prerenderCallback );
+      }
+      postprocessor.composer.render();
+    } );
   }
 
   run () {
     this.userEventsHandler = new MazeGameUserEventHandlers(
-      this.controller, this.camera, this.renderer );
+      this.controller, () => {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+
+        this.renderer.setSize( window.innerWidth, window.innerHeight );
+        this.postprocessors.forEach( postprocessor => {
+          postprocessor.composer.setSize( window.innerWidth, window.innerHeight );
+        } );
+      } );
     this.userEventsHandler.setup();
 
     this.setup();
